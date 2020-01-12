@@ -273,8 +273,8 @@ static switch_size_t buffer_h264_nalu(h264_codec_context_t *context, switch_fram
 
 			if (context->got_sps <= 0 && nalu_type == 7) context->got_sps = 1;
 
-			size += switch_buffer_write(buffer, sync_bytes, sizeof(sync_bytes));
-			size += switch_buffer_write(buffer, (void *)data, nalu_size);
+			size = switch_buffer_write(buffer, sync_bytes, sizeof(sync_bytes));
+			size = switch_buffer_write(buffer, (void *)data, nalu_size);
 			data += nalu_size;
 			left -= nalu_size;
 			goto again;
