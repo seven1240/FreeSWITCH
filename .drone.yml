@@ -11,8 +11,12 @@ steps:
       pull: true
       commands:
       - cat /proc/sys/kernel/core_pattern
+      - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install nasm
+      - git clone https://github.com/cisco/openh264.git openh264
+      - cd openh264 && make && make install && cd ..
       - ./bootstrap.sh -j
       - echo "applications/mod_test" >> modules.conf
+      - echo 'codecs/mod_openh264' >> modules.conf
       - sed -i '/applications\/mod_http_cache/s/^#//g' modules.conf
       - sed -i '/event_handlers\/mod_rayo/s/^#//g' modules.conf
       - sed -i '/formats\/mod_opusfile/s/^#//g' modules.conf
@@ -63,9 +67,13 @@ steps:
       image: signalwire/freeswitch-public-base:stretch
       pull: true
       commands:
+      - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install nasm
+      - git clone https://github.com/cisco/openh264.git openh264
+      - cd openh264 && make && make install && cd ..
       - ./bootstrap.sh -j
       - cp build/modules.conf.most modules.conf
       #Enable/Uncomment mods
+      - echo 'codecs/mod_openh264' >> modules.conf
       - sed -i "/mod_mariadb/s/^#//g" modules.conf
       - sed -i "/mod_v8/s/^#//g" modules.conf
       #Disable/Comment out mods
@@ -117,6 +125,6 @@ trigger:
 
 ---
 kind: signature
-hmac: d354f6d232ae6417b539fb9b40fc15765c3247ab58c87a5135a0ac6c448e1cd0
+hmac: 4c92b0e511438b5c5c3cb25a80ab7c26feae0c65caab4b563a138215c5dea670
 
 ...
