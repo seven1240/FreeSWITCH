@@ -127,7 +127,7 @@ FST_CORE_BEGIN("conf")
 				
 				if (frame.img != NULL) {
 					// write down the decoded
-					status = switch_img_write_png(frame.img, "case1.output.qcif.png");
+					status = switch_img_write_png(frame.img, (char *)"case1.output.qcif.png");
 					fst_check(status == SWITCH_STATUS_SUCCESS);
 					switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
 						 "write output file done! \n");
@@ -191,7 +191,7 @@ FST_CORE_BEGIN("conf")
 				fst_check(decode_status == SWITCH_STATUS_SUCCESS || decode_status == SWITCH_STATUS_MORE_DATA);
 				if (frame.img != NULL) {
 					// write down the decoded
-					status = switch_img_write_png(frame.img, "case2.output.qcif.png");
+					status = switch_img_write_png(frame.img, (char *)"case2.output.qcif.png");
 					fst_check(status == SWITCH_STATUS_SUCCESS);
 					switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
 						 "write output file done! \n");
