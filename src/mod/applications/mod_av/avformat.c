@@ -2467,10 +2467,10 @@ GCC_DIAG_ON(deprecated-declarations)
 	if (pop && status == SWITCH_STATUS_SUCCESS) {
 		switch_image_t *img = (switch_image_t *)pop;
 		int64_t pts;
-		int64_t now = switch_time_now();
+		int64_t now = switch_micro_time_now();
 
 		pts = av_rescale_q(*((uint64_t *)img->user_priv), st->time_base, AV_TIME_BASE_Q);
-		// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "pkt_pts: %lld pts: %lld queue size: %u\n", *((uint64_t *)img->user_priv), pts, switch_queue_size(context->eh.video_queue));
+		// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "pkt_pts: %" SWITCH_INT64_T_FMT " pts: %" SWITCH_INT64_T_FMT " queue size: %u\n", *((uint64_t *)img->user_priv), pts, switch_queue_size(context->eh.video_queue));
 		handle->vpos = pts;
 
 		if (!context->video_start_time) {
@@ -2478,24 +2478,35 @@ GCC_DIAG_ON(deprecated-declarations)
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "set start time: %" SWITCH_INT64_T_FMT " now: %" SWITCH_INT64_T_FMT " pts: %" SWITCH_INT64_T_FMT "\n", context->video_start_time, now, pts);
 		}
 
+		if (context->video_start_time) {
+			int64_t pos_delta = handle->vpos - handle->pos * 1000000.0 / handle->samplerate;
+
+			if (pos_delta > 500000) {
+				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "A/V sync delta=%" SWITCH_INT64_T_FMT "\n", pos_delta);
+				context->video_start_time += 500000;
+			}
+		}
+
 		if (st->time_base.num == 0) {
 			mst->next_pts = 0;
 		} else {
 			// int64_t last_pts = mst->next_pts;
 			mst->next_pts = context->video_start_time + pts;
+
+GCC_DIAG_OFF(deprecated-declarations)
 			// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "pts: %" SWITCH_INT64_T_FMT " last_pts: %" SWITCH_INT64_T_FMT " delta: %" SWITCH_INT64_T_FMT " frame_pts: %" SWITCH_INT64_T_FMT " nextpts: %" SWITCH_INT64_T_FMT ", num: %d, den:%d num:%d den:%d sleep: %" SWITCH_INT64_T_FMT "\n",
 			// pts, last_pts, mst->next_pts - last_pts, *((uint64_t *)img->user_priv), mst->next_pts, st->time_base.num, st->time_base.den, st->codec->time_base.num, st->codec->time_base.den, mst->next_pts - now);
+GCC_DIAG_ON(deprecated-declarations)
 		}
 
 		if (pts == 0 || context->video_start_time == 0) mst->next_pts = 0;
 
 		if ((mst->next_pts && (now - mst->next_pts) > max_delta)) {
-			//switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "picture is too late, off: %" SWITCH_INT64_T_FMT " max delta: %" SWITCH_INT64_T_FMT " queue size:%u fps:%u/%0.2f\n", (int64_t)(now - mst->next_pts), max_delta, switch_queue_size(context->eh.video_queue), context->read_fps, handle->mm.fps);
+			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "picture is too late, off: %" SWITCH_INT64_T_FMT " max delta: %" SWITCH_INT64_T_FMT " queue size:%u fps:%u/%0.2f\n", (int64_t)(now - mst->next_pts), max_delta, switch_queue_size(context->eh.video_queue), context->read_fps, handle->mm.fps);
 			switch_img_free(&img);
 			//max_delta = AV_TIME_BASE;
 
 			if (switch_queue_size(context->eh.video_queue) > 0) {
-				// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "WTF again\n");
 				goto again;
 			} else if (!(flags & SVR_BLOCK) && !do_fl) {
 				mst->next_pts = 0;
@@ -2505,9 +2516,11 @@ GCC_DIAG_ON(deprecated-declarations)
 		}
 
 		if ((flags & SVR_BLOCK)) {
+			// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "zzz: delta=%" SWITCH_INT64_T_FMT " pos=%.3f vpos=%.3f pdelta=%.3f\n", switch_micro_time_now() - mst->next_pts, handle->pos * 1.0 / handle->samplerate * 1000, handle->vpos * 1.0 / 1000, handle->vpos * 1.0 / 1000 - handle->pos * 1000.0 / handle->samplerate);
+
 			while (switch_micro_time_now() - mst->next_pts < -10000) {
 				// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "yield, delta=%" SWITCH_INT64_T_FMT "\n", switch_micro_time_now() - mst->next_pts);
-				switch_yield(1000);
+				switch_yield(5000);
 			}
 			frame->img = img;
 		} else {
